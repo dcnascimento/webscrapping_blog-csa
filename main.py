@@ -3,30 +3,31 @@ from selenium import webdriver
 from selenium.common import exceptions
 from bs4 import BeautifulSoup
 import pandas as pd 
+from page import Page
+from post import Post
+from scrap import Scrap
 
 session = webdriver.Firefox(executable_path=r'C:\geckodriver.exe')
-session.get("http://www.csa-ma.com.br/blog-2/")
 
-loadMoreButton = session.find_element_by_class_name('load-more-button')
+main_page = Page()
+post = Post()
+scrap = Scrap()
 
-while True:
-    try:
-        loadMoreButton.click()
-        time.sleep(3)
-    except exceptions.StaleElementReferenceException as e:
-        break
+main_page.load_page(session)
+main_page.show_all_posts(session)
 
-soup = BeautifulSoup(session.page_source, 'html.parser')
-posts = session.find_elements_by_class_name('post-content')
+bs = BeautifulSoup(session.page_source, 'html.parser')
 
-postTitles, postDates, postExcerpts, urls = [], [], [], []
+list_posts = post.get_all_posts(session)
 
-for post in posts:
-    postTitles.append(post.find_element_by_class_name('post-title').text)
-    postDates.append(post.find_element_by_class_name('post-date').text)
-    postExcerpts.append(post.find_element_by_class_name('post-excerpt').text)
-    urls.append(soup.find('img', class_='attachment-post-thumbnail').get('src'))
+post.title, post.date, post.excerpt, post.url = [], [], [], []
 
-df = pd.DataFrame({'Titulo': postTitles, 'Data de Postagem': postDates, 'Resumo': postExcerpts, 'URL da Imagem': urls})
+for p in list_posts:
+    post.title.append(scrap.get_titles(p))
+    post.date.append(scrap.get_dates(p))
+    post.excerpt.append(scrap.get_excerpts(p))
+    post.url.append(scrap.get_url_image(bs))
+
+df = pd.DataFrame({'Titulo': post.title, 'Data de Postagem': post.date, 'Resumo': post.excerpt, 'URL da Imagem': post.url})
 df.head()
-df.to_csv('Scrap_Blog.csv')
+df.to_csv('blog_content.csv')
